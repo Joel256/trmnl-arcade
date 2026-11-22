@@ -1,0 +1,121 @@
+<div class="view view--full">
+  {% if phase == 'lobby' %}
+
+    {%- comment -%} The only QR in the game, and the only way in. {%- endcomment -%}
+    <div class="layout layout--col gap--large" style="align-items:center;justify-content:center">
+      <span class="title">Gardener for a Week</span>
+      {% for entry in join_urls %}{{ entry[1] | qr_code: 12 }}{% endfor %}
+      <span class="label label--gray-out">SCAN TO START YOUR GARDEN</span>
+    </div>
+
+  {% else %}
+
+    {%- comment -%}
+      Placeholder art. One <symbol> per growth stage, referenced with <use>, so the
+      whole shelf resolves from one asset set on OG 2-bit, X grayscale and BWRY.
+      Wilting is a rotation on the plant group about the pot rim — no extra sprite.
+      No coins, no forecast, no QR here: the day counter is the only text.
+    {%- endcomment -%}
+
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <symbol id="g-seed" viewBox="0 0 100 150">
+          <path d="M36,106 Q50,96 64,106" />
+        </symbol>
+        <symbol id="g-sprout" viewBox="0 0 100 150">
+          <path d="M50,106 L50,84" />
+          <path d="M50,92 Q38,86 42,98" /><path d="M50,88 Q62,82 58,94" />
+        </symbol>
+        <symbol id="g-bud" viewBox="0 0 100 150">
+          <path d="M50,106 L50,74" />
+          <path d="M50,96 Q38,90 42,102" /><path d="M50,92 Q62,86 58,98" />
+          <ellipse cx="50" cy="64" rx="9" ry="14" />
+        </symbol>
+        <symbol id="g-bloom" viewBox="0 0 100 150">
+          <path d="M50,106 L50,64" />
+          <path d="M50,94 Q36,88 40,100" /><path d="M50,88 Q64,82 60,94" />
+          <circle cx="50" cy="50" r="13" />
+          <path d="M50,29 L50,37 M64,36 L59,42 M71,50 L63,50 M64,64 L59,58
+                   M50,71 L50,63 M36,64 L41,58 M29,50 L37,50 M36,36 L41,42" />
+        </symbol>
+        <symbol id="g-seedhead" viewBox="0 0 100 150">
+          <path d="M50,106 L50,66" />
+          <path d="M50,96 Q36,90 40,102" />
+          <circle cx="50" cy="54" r="11" />
+          <circle cx="46" cy="52" r="1.6" fill="currentColor" />
+          <circle cx="54" cy="51" r="1.6" fill="currentColor" />
+          <circle cx="50" cy="58" r="1.6" fill="currentColor" />
+        </symbol>
+        <symbol id="g-pot" viewBox="0 0 100 150">
+          <path d="M24,104 L76,104 L76,113 L24,113 Z" />
+          <path d="M28,113 L72,113 L66,144 L34,144 Z" />
+        </symbol>
+      </defs>
+    </svg>
+
+    <div style="display:flex;flex-direction:column;height:100%">
+
+      {%- comment -%} Top third: scene and the day counter on its little sign. {%- endcomment -%}
+      <div style="flex:0 0 31%;position:relative">
+        <svg viewBox="0 0 800 150" width="100%" height="100%" preserveAspectRatio="none"
+             fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M0,132 Q120,86 240,120 Q360,150 470,108 Q580,70 700,116 Q760,138 800,124" />
+          <path d="M0,146 Q160,118 320,142 Q520,168 800,138" />
+          <circle cx="694" cy="42" r="20" />
+        </svg>
+        <div style="position:absolute;top:10px;left:16px">
+          <span class="label">Day {{ board.day }} / {{ board.days }}</span>
+        </div>
+      </div>
+
+      {%- comment -%}
+        Two shelves of four. A plain flex div, never a nested .layout — that is
+        flex:0 1 auto and collapses to zero width.
+      {%- endcomment -%}
+      {% for shelf in (0..1) %}
+        <div style="flex:1 1 0;display:flex;align-items:flex-end;justify-content:space-around;
+                    padding:0 40px;border-bottom:3px solid currentColor">
+          {% for pot in board.pots %}
+            {%- assign row = pot.index | divided_by: 4 -%}
+            {% if row == shelf %}
+              <div style="flex:0 0 22%;position:relative;text-align:center">
+                {% if pot.owned %}
+                  <svg viewBox="0 0 100 150" width="100%" height="96%"
+                       fill="none" stroke="currentColor" stroke-width="3"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    {%- comment -%} A held bloom shines. {%- endcomment -%}
+                    {% if pot.bloomed %}
+                      <circle cx="50" cy="50" r="30" stroke-width="1.5" stroke-dasharray="2 8" />
+                    {% endif %}
+                    {% unless pot.empty %}
+                      <g transform="rotate({{ pot.droop }} 50 108)">
+                        {%- assign sprite = '' -%}
+                        {%- case pot.stage -%}
+                          {%- when 1 -%}{%- assign sprite = 'g-seed' -%}
+                          {%- when 2 -%}{%- assign sprite = 'g-sprout' -%}
+                          {%- when 3 -%}{%- assign sprite = 'g-bud' -%}
+                          {%- when 4 -%}{%- assign sprite = 'g-bloom' -%}
+                          {%- when 5 -%}{%- assign sprite = 'g-seedhead' -%}
+                        {%- endcase -%}
+                        {% if sprite != '' %}<use href="#{{ sprite }}" />{% endif %}
+                      </g>
+                    {% endunless %}
+                    <use href="#g-pot" />
+                    {%- comment -%} One shared badge for every hazard: something is wrong here. {%- endcomment -%}
+                    {% if pot.damage %}
+                      <circle cx="76" cy="76" r="11" fill="currentColor" />
+                      <path d="M76,70 L76,78" stroke="#fff" stroke-width="3" />
+                      <circle cx="76" cy="82" r="1.5" fill="#fff" stroke="none" />
+                    {% endif %}
+                  </svg>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+    </div>
+
+  {% endif %}
+</div>
